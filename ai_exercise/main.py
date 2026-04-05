@@ -8,6 +8,7 @@ from ai_exercise.llm.embeddings import openai_ef
 from ai_exercise.loading.document_loader import (
     add_documents,
     build_docs,
+    get_all_specs,
     get_json_data,
     split_docs,
 )
@@ -33,19 +34,21 @@ def health_check_route() -> HealthRouteOutput:
 
 @app.get("/load")
 async def load_docs_route() -> LoadDocumentsOutput:
-    """Route to load documents into vector store."""
-    json_data = get_json_data()
-    documents = build_docs(json_data)
+    """Route to load documents from all 7 StackOne specs into vector store."""
+    all_documents = []
+    for spec_name, json_data in get_all_specs():
+        documents = build_docs(json_data)
+        # Tag each document with its source spec for traceability
+        for doc in documents:
+            if doc.metadata is None:
+                doc.metadata = {}
+            doc.metadata["spec"] = spec_name
+        documents = split_docs(documents)
+        all_documents.extend(documents)
+        print(f"  {spec_name}: {len(documents)} chunks")
 
-    # split docs
-    documents = split_docs(documents)
-
-    # load documents into vector store
-    add_documents(collection, documents)
-
-    # check the number of documents in the collection
-    print(f"Number of documents in collection: {collection.count()}")
-
+    add_documents(collection, all_documents)
+    print(f"Total documents in collection: {collection.count()}")
     return LoadDocumentsOutput(status="ok")
 
 

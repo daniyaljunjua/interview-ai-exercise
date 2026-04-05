@@ -31,7 +31,17 @@ class Settings(BaseSettings):
     k_neighbors: int = 5
 
     # You will want to point towards all of the specs not just this one
-    docs_url: str = "https://docs.stackone.com/openapi/646b2d607eeee7006f8898bf"
+    docs_url: str = "https://api.eu1.stackone.com/oas/stackone.json"
+    # All 7 StackOne OpenAPI specs
+    spec_urls: list[str] = [
+        "https://api.eu1.stackone.com/oas/stackone.json",
+        "https://api.eu1.stackone.com/oas/hris.json",
+        "https://api.eu1.stackone.com/oas/ats.json",
+        "https://api.eu1.stackone.com/oas/lms.json",
+        "https://api.eu1.stackone.com/oas/iam.json",
+        "https://api.eu1.stackone.com/oas/crm.json",
+        "https://api.eu1.stackone.com/oas/marketing.json",
+    ]
 
 
 SETTINGS = Settings()  # type: ignore

@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from pydantic import BaseModel
+from typing import Any
 
 
 @dataclass
@@ -10,7 +11,7 @@ class Document:
     """A document to be added to the vector store."""
 
     page_content: str
-    metadata: dict = None
+    metadata: dict[str, Any] | None = None
 
 
 class HealthRouteOutput(BaseModel):
