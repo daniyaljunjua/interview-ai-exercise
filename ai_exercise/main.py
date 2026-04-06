@@ -6,15 +6,15 @@ from ai_exercise.constants import SETTINGS, chroma_client, openai_client
 from ai_exercise.llm.completions import create_prompt, get_completion
 from ai_exercise.llm.embeddings import openai_ef
 from ai_exercise.loading.document_loader import (
+    Strategy,
     add_documents,
-    build_docs,
+    build_docs_for_spec,
     get_all_specs,
-    get_json_data,
-    split_docs,
 )
 from ai_exercise.models import (
     ChatOutput,
     ChatQuery,
+    Document,
     HealthRouteOutput,
     LoadDocumentsOutput,
 )
@@ -23,7 +23,9 @@ from ai_exercise.retrieval.vector_store import create_collection
 
 app = FastAPI()
 
-collection = create_collection(chroma_client, openai_ef, SETTINGS.collection_name)
+collection = create_collection(
+    chroma_client, openai_ef, SETTINGS.collection_name
+)
 
 
 @app.get("/health")
@@ -33,22 +35,29 @@ def health_check_route() -> HealthRouteOutput:
 
 
 @app.get("/load")
-async def load_docs_route() -> LoadDocumentsOutput:
+async def load_docs_route(
+    strategy: Strategy = "naive",
+) -> LoadDocumentsOutput:
     """Route to load documents from all 7 StackOne specs into vector store."""
-    all_documents = []
+    global collection
+    collection_name = f"stackone_{strategy}"
+    collection = create_collection(
+        chroma_client, openai_ef, collection_name
+    )
+
+    all_documents: list[Document] = []
     for spec_name, json_data in get_all_specs():
-        documents = build_docs(json_data)
-        # Tag each document with its source spec for traceability
-        for doc in documents:
-            if doc.metadata is None:
-                doc.metadata = {}
-            doc.metadata["spec"] = spec_name
-        documents = split_docs(documents)
+        documents = build_docs_for_spec(
+            spec_name, json_data, strategy=strategy
+        )
         all_documents.extend(documents)
         print(f"  {spec_name}: {len(documents)} chunks")
 
     add_documents(collection, all_documents)
-    print(f"Total documents in collection: {collection.count()}")
+    print(
+        f"Total documents in collection ({collection_name}): "
+        f"{collection.count()}"
+    )
     return LoadDocumentsOutput(status="ok")
 
 
@@ -57,11 +66,15 @@ def chat_route(chat_query: ChatQuery) -> ChatOutput:
     """Chat route to chat with the API."""
     # Get relevant chunks from the collection
     relevant_chunks = get_relevant_chunks(
-        collection=collection, query=chat_query.query, k=SETTINGS.k_neighbors
+        collection=collection,
+        query=chat_query.query,
+        k=SETTINGS.k_neighbors,
     )
 
     # Create prompt with context
-    prompt = create_prompt(query=chat_query.query, context=relevant_chunks)
+    prompt = create_prompt(
+        query=chat_query.query, context=relevant_chunks
+    )
 
     print(f"Prompt: {prompt}")
 

@@ -1,7 +1,7 @@
 """Document loader for the RAG example."""
 
 import json
-from typing import Any
+from typing import Any, Literal
 
 import chromadb
 import requests
@@ -9,7 +9,10 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from ai_exercise.constants import SETTINGS
 from ai_exercise.loading.chunk_json import chunk_data
+from ai_exercise.loading.openapi_chunker import chunk_spec
 from ai_exercise.models import Document
+
+Strategy = Literal["naive", "structural"]
 
 
 def get_json_data() -> dict[str, Any]:
@@ -76,3 +79,31 @@ def get_all_specs() -> list[tuple[str, dict[str, Any]]]:
         except requests.RequestException as e:
             print(f"Failed to fetch {url}: {e}")
     return results
+
+
+def build_docs_for_spec(
+    spec_name: str,
+    spec: dict[str, Any],
+    strategy: Strategy = "naive",
+) -> list[Document]:
+    """Dispatch between naive (baseline) and structural chunking.
+
+    Args:
+        spec_name: Name of the spec (e.g. "stackone", "hris").
+        spec: Parsed OpenAPI spec dict.
+        strategy: "naive" for baseline character chunking, "structural" for
+                  operation/schema/auth chunks.
+
+    Returns:
+        List of Document objects ready for embedding.
+    """
+    if strategy == "structural":
+        return chunk_spec(spec_name, spec)
+
+    # Naive baseline: character-based chunking (original behavior)
+    docs = build_docs(spec)
+    for doc in docs:
+        if doc.metadata is None:
+            doc.metadata = {}
+        doc.metadata["spec"] = spec_name
+    return split_docs(docs)

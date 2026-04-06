@@ -25,3 +25,10 @@ __pycache__/
 
 # chroma db
 .chroma_db/
+
+# Personal working docs — not part of submission
+PLAN.md
+CLAUDE.md
+docs/baseline_results.mdPLAN.md
+CLAUDE.md
+docs/baseline_results.md
