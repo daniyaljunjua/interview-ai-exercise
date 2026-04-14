@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.115.5",
     "langchain-text-splitters>=0.3.2",
     "pydantic-settings>=2.6.1",
+    "rank-bm25>=0.2.2",
 ]
 
 [project.optional-dependencies]
@@ -77,3 +78,8 @@ check_untyped_defs = true
 
 # Make __init__.py file optional for package definitions; if missing, mypy requires __init__.py at packages roots, see https://mypy.readthedocs.io/en/stable/running_mypy.html#mapping-file-paths-to-modules
 explicit_package_bases = true
+
+[dependency-groups]
+dev = [
+    "types-requests>=2.33.0.20260402",
+]

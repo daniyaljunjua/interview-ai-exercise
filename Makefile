@@ -35,6 +35,15 @@ dev-api:
 start-app:
 	uv run streamlit run demo/main.py
 
+########################################################################################################################
+# Evaluation
+########################################################################################################################
 
-
+eval:
+	@echo "Loading naive collection..."
+	@curl -sf "http://localhost:80/load?strategy=naive" || (echo "Server not running. Start it with 'make dev-api' first." && exit 1)
+	@echo "\nLoading structural collection..."
+	@curl -sf "http://localhost:80/load?strategy=structural"
+	@echo "\nRunning evaluation..."
+	uv run python -m ai_exercise.eval.run naive structural
 
