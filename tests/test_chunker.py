@@ -300,15 +300,15 @@ def _get_chunk_by_meta(
 class TestChunkSpec:
     """Test the main chunk_spec entry point."""
 
-    def test_produces_all_three_chunk_types(self) -> None:
-        """All three chunk types should be present."""
+    def test_produces_all_four_chunk_types(self) -> None:
+        """All four chunk types should be present."""
         chunks = chunk_spec("test", MINIMAL_SPEC)
         types = {
             c.metadata["chunk_type"]
             for c in chunks
             if c.metadata
         }
-        assert types == {"auth", "operation", "schema"}
+        assert types == {"auth", "overview", "operation", "schema"}
 
     def test_operation_count(self) -> None:
         """Two ops: GET /users and POST /users."""
@@ -486,6 +486,12 @@ class TestAuthChunks:
         assert "API key" in text
         assert "All endpoints" in text
 
+    def test_auth_chunk_has_citation_marker(self) -> None:
+        """Auth chunk contains a Citation line for consistent LLM citing."""
+        chunks = chunk_spec("test", MINIMAL_SPEC)
+        auth = _get_chunks_by_type(chunks, "auth")[0]
+        assert "Citation: [test: auth]" in auth.page_content
+
     def test_auth_metadata(self) -> None:
         """Auth metadata is minimal: spec + chunk_type."""
         chunks = chunk_spec("test", MINIMAL_SPEC)
@@ -494,6 +500,59 @@ class TestAuthChunks:
             "spec": "test",
             "chunk_type": "auth",
         }
+
+    def test_auth_chunk_no_categories(self) -> None:
+        """Auth chunk must NOT contain Available API categories."""
+        chunks = chunk_spec("test", MINIMAL_SPEC)
+        auth = _get_chunks_by_type(chunks, "auth")[0]
+        assert "Available API categories" not in auth.page_content
+
+
+# ---------------------------------------------------------------------------
+# Tests: overview chunks
+# ---------------------------------------------------------------------------
+
+
+class TestOverviewChunks:
+    """Test overview chunk formatting."""
+
+    def test_one_overview_chunk_per_spec(self) -> None:
+        """Exactly one overview chunk per spec."""
+        chunks = chunk_spec("test", MINIMAL_SPEC)
+        overviews = _get_chunks_by_type(chunks, "overview")
+        assert len(overviews) == 1
+
+    def test_overview_metadata(self) -> None:
+        """Overview metadata has spec and chunk_type."""
+        chunks = chunk_spec("test", MINIMAL_SPEC)
+        ov = _get_chunks_by_type(chunks, "overview")[0]
+        assert ov.metadata == {
+            "spec": "test",
+            "chunk_type": "overview",
+        }
+
+    def test_overview_has_citation_marker(self) -> None:
+        """Overview chunk has its own citation marker."""
+        chunks = chunk_spec("test", MINIMAL_SPEC)
+        ov = _get_chunks_by_type(chunks, "overview")[0]
+        assert "Citation: [test: overview]" in ov.page_content
+
+    def test_overview_has_categories(self) -> None:
+        """Overview chunk lists API categories from tags."""
+        chunks = chunk_spec("test", MINIMAL_SPEC)
+        ov = _get_chunks_by_type(chunks, "overview")[0]
+        text = ov.page_content
+        assert "Available API categories" in text
+        assert "Users" in text
+        assert "Accounts" in text
+
+    def test_overview_has_title_and_url(self) -> None:
+        """Overview chunk contains title and base URL."""
+        chunks = chunk_spec("test", MINIMAL_SPEC)
+        ov = _get_chunks_by_type(chunks, "overview")[0]
+        text = ov.page_content
+        assert "Title: Test API" in text
+        assert "https://api.example.com" in text
 
 
 # ---------------------------------------------------------------------------

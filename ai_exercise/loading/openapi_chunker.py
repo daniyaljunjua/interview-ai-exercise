@@ -572,6 +572,7 @@ def _build_auth_chunk(
 
     parts = [
         f"Spec: {spec_name}",
+        f"Citation: [{spec_name}: auth]",
         f"Title: {title}",
         f"Base URL: {base_url}",
         "Authentication and global request conventions",
@@ -629,13 +630,6 @@ def _build_auth_chunk(
                 line += f":\n    {desc}"
             parts.append(line)
 
-    # List available tags/categories
-    tags = spec.get("tags", [])
-    if tags:
-        tag_names = [t.get("name", "") for t in tags if t.get("name")]
-        if tag_names:
-            parts.append(f"\nAvailable API categories: {', '.join(tag_names)}")
-
     text = "\n".join(parts)
 
     return Document(
@@ -675,13 +669,52 @@ def _extract_common_headers(spec: dict[str, Any]) -> list[dict[str, Any]]:
     return results
 
 
+def _build_overview_chunk(
+    spec_name: str,
+    spec: dict[str, Any],
+) -> Document:
+    """Build an overview chunk with API categories and description."""
+    info = spec.get("info", {})
+    title = info.get("title", spec_name)
+    description = info.get("description", "")
+    if len(description) > 200:
+        description = description[:197] + "..."
+
+    servers = spec.get("servers", [])
+    base_url = servers[0]["url"] if servers else "N/A"
+
+    parts = [
+        f"Spec: {spec_name}",
+        f"Citation: [{spec_name}: overview]",
+        f"Title: {title}",
+        f"Base URL: {base_url}",
+    ]
+    if description:
+        parts.append(f"Description: {description}")
+
+    tags = spec.get("tags", [])
+    if tags:
+        tag_names = [t.get("name", "") for t in tags if t.get("name")]
+        if tag_names:
+            parts.append(
+                f"\nAvailable API categories: {', '.join(tag_names)}"
+            )
+
+    text = "\n".join(parts)
+
+    return Document(
+        page_content=text,
+        metadata={"spec": spec_name, "chunk_type": "overview"},
+    )
+
+
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
 
 def chunk_spec(spec_name: str, spec: dict[str, Any]) -> list[Document]:
-    """Chunk an OpenAPI spec into operation, schema, and auth chunks.
+    """Chunk an OpenAPI spec into operation, schema, auth, and overview chunks.
 
     Args:
         spec_name: Name of the spec (e.g. "stackone", "hris").
@@ -695,7 +728,10 @@ def chunk_spec(spec_name: str, spec: dict[str, Any]) -> list[Document]:
     # 1. Auth chunk (one per spec)
     chunks.append(_build_auth_chunk(spec_name, spec))
 
-    # 2. Operation chunks (one per path+method)
+    # 2. Overview chunk (one per spec)
+    chunks.append(_build_overview_chunk(spec_name, spec))
+
+    # 3. Operation chunks (one per path+method)
     for path, path_item in spec.get("paths", {}).items():
         path_params = path_item.get("parameters", [])
         for method in ("get", "post", "put", "patch", "delete"):
@@ -708,7 +744,7 @@ def chunk_spec(spec_name: str, spec: dict[str, Any]) -> list[Document]:
                 )
             )
 
-    # 3. Schema chunks (one per named schema, skip boilerplate)
+    # 4. Schema chunks (one per named schema, skip boilerplate)
     schemas = _schema_lookup(spec)
     for schema_name, schema_def in schemas.items():
         doc = _build_schema_chunk(spec_name, schema_name, schema_def, spec)
