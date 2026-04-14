@@ -1,9 +1,13 @@
 """Set up some constants for the project."""
 
+import logging
+
 import chromadb
 from openai import OpenAI
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings
+
+logging.getLogger("chromadb").setLevel(logging.ERROR)
 
 
 class Settings(BaseSettings):
@@ -29,6 +33,10 @@ class Settings(BaseSettings):
     collection_name: str = "documents"
     chunk_size: int = 1000
     k_neighbors: int = 5
+
+    # Multi-signal refusal thresholds
+    refusal_min_fused_score: float = 0.008
+    refusal_min_dense_score: float = 0.35
 
     # You will want to point towards all of the specs not just this one
     docs_url: str = "https://api.eu1.stackone.com/oas/stackone.json"

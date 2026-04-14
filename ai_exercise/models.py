@@ -1,9 +1,9 @@
 """Types for the API."""
 
 from dataclasses import dataclass
+from typing import Any
 
 from pydantic import BaseModel
-from typing import Any
 
 
 @dataclass
@@ -36,3 +36,6 @@ class ChatOutput(BaseModel):
     """Model for the chat route output."""
 
     message: str
+    retrieval_strategy: str | None = None
+    refused: bool = False
+    citations: list[str] = []
